@@ -1,4 +1,4 @@
-const { ApolloServer, gql } = require('apollo-server');
+const { ApolloServer, gql, UserInputError } = require('apollo-server');
 let { books } = require('./data')
 
 const PORT = process.env.PORT || 4001
@@ -10,7 +10,8 @@ const typeDefs = gql`
   type Book {
     id: ID,
     title: String
-    author: String
+    author: String,
+    completed: Boolean,
   }
 
   type Query {
@@ -20,6 +21,7 @@ const typeDefs = gql`
   type Mutation {
     addBook(title: String!, author: String!): Book
     removeBook(id: String!): Book
+    toggleCompletion(id: String!): Book
   }
 `;
 
@@ -31,14 +33,25 @@ const resolvers = {
   },
   Mutation: {
     addBook: (_, { title, author }) => {
-      const newBook = { id: String(Date.now()), title, author }
-      books = [...books, newBook]
-      return newBook
+      const exists = books.find(b => b.title === title && b.author === author)
+
+      if (exists) {
+        throw new UserInputError(`${title} by ${author} already exists.`)
+      } else {
+        const newBook = { id: String(Date.now()), title, author, completed: false }
+        books = [...books, newBook]
+        return newBook
+      }
     },
     removeBook: (_, { id }) => {
       const removedBook = books.find(b => b.id === id)
       books = books.filter(book => book.id !== id)
       return removedBook
+    },
+    toggleCompletion: (_, { id }) => {
+      const index = books.findIndex(b => b.id === id)
+      books[index] = {...books[index], completed: !books[index].completed}
+      return books[index]
     }
   }
 };
