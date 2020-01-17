@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
+import { useMutation } from '@apollo/react-hooks'
+import { GET_BOOKS, ADD_BOOK } from '../graphql/api'
 
 const InputForm = styled.form`
   display: flex;
@@ -31,10 +33,31 @@ const Button = styled.button`
   margin-top: 15px;
 `
 
-const BookForm = ({ addBook }) => {
+const ErrorMessage = styled.span`
+  color: red;
+`
+
+const ErrorContainer = styled.div`
+  margin: 20px 0 0 0;
+`
+
+const BookForm = () => {
   const [form, setForm] = useState({
     title: '',
-    author: ''
+    author: '',
+    error: ''
+  })
+
+  const [addBook] = useMutation(ADD_BOOK, {
+    onError: (err) => setForm({ ...form, error: err.message }),
+    onCompleted: () => setForm({ title: '', author: '', error: null }),
+    update: (cache, { data: { addBook } }) => {
+      const { books } = cache.readQuery({ query: GET_BOOKS })
+      cache.writeQuery({
+        query: GET_BOOKS,
+        data: { books: [...books, addBook] }
+      })
+    },
   })
 
   const handleForm = (e) => {
@@ -44,8 +67,7 @@ const BookForm = ({ addBook }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    addBook({ variables: { title: form.title, author: form.author }})
-    setForm({ title: '', author: ''})
+    addBook({ variables: { title: form.title, author: form.author } })
   }
 
   return (
@@ -58,7 +80,12 @@ const BookForm = ({ addBook }) => {
         <label htmlFor="author">Author : </label>
         <input type="text" name="author" onChange={handleForm} value={form.author} />
       </InputContainer>
-      <Button>Add Book</Button>
+      <div>
+        <Button>Add Book</Button>
+      </div>
+      <ErrorContainer>
+        {form.error ? <ErrorMessage>{form.error}</ErrorMessage> : null}
+      </ErrorContainer>
     </InputForm>
   )
 }
