@@ -1,7 +1,6 @@
-import React, { useState } from 'react'
+import React from 'react'
 import styled from 'styled-components'
-import { useMutation } from '@apollo/react-hooks'
-import { GET_BOOKS, ADD_BOOK } from '../graphql/api'
+import useBookForm from '../hooks/useBookForm'
 
 const InputForm = styled.form`
   display: flex;
@@ -42,33 +41,7 @@ const ErrorContainer = styled.div`
 `
 
 const BookForm = () => {
-  const [form, setForm] = useState({
-    title: '',
-    author: '',
-    error: ''
-  })
-
-  const [addBook] = useMutation(ADD_BOOK, {
-    onError: (err) => setForm({ ...form, error: err.message }),
-    onCompleted: () => setForm({ title: '', author: '', error: null }),
-    update: (cache, { data: { addBook } }) => {
-      const { books } = cache.readQuery({ query: GET_BOOKS })
-      cache.writeQuery({
-        query: GET_BOOKS,
-        data: { books: [...books, addBook] }
-      })
-    },
-  })
-
-  const handleForm = (e) => {
-    const newForm = { ...form, [`${e.target.name}`]: e.target.value }
-    setForm(newForm)
-  }
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    addBook({ variables: { title: form.title, author: form.author } })
-  }
+  const { form, handleForm, handleSubmit } = useBookForm()
 
   return (
     <InputForm onSubmit={handleSubmit}>
